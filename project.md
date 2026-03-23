@@ -77,7 +77,12 @@ star-void-music/
 │   │   ├── jwt/
 │   │   └── hash/
 │   │
-│   ├── migrations/
+│   ├── db/
+│   │   ├── migrations/
+│   │   ├── queries/
+│   │   └── sqlc/     # Generated Go code from sqlc
+│   │   
+│   │
 │   ├── storage/music/
 │   ├── Dockerfile
 │   └── go.mod
@@ -95,8 +100,28 @@ star-void-music/
 │   └── vite.config.js
 │
 ├── docker-compose.yml
-└── README.md
+└── project.md
 ```
+
+### ✅ Backend Initialization Scope (First Delivery)
+
+Initialize backend with a clean, scalable skeleton:
+
+- Create base module and folders:
+  - `cmd/server`
+  - `internal/config`
+  - `internal/handler`
+  - `internal/service`
+  - `internal/repository`
+  - `internal/middleware`
+  - `internal/models`
+  - `internal/streaming`
+  - `pkg/jwt`
+  - `pkg/hash`
+- Bootstrap Gin server in `cmd/server/main.go`
+- Add `GET /health` endpoint returning basic service status
+- Wire router setup and dependency injection entrypoint (minimal, ready for expansion)
+- Keep implementation simple, readable, and production-oriented
 
 ---
 
@@ -345,6 +370,7 @@ This exposes your backend securely to your phone.
 * Upload songs
 * Stream songs
 * Basic UI
+* **Backend skeleton initialized (Gin bootstrap + health endpoint + clean folder layout)**
 
 ## Phase 2
 
