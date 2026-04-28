@@ -6,11 +6,14 @@ import (
 	"context"
 	"time"
 
+	db "star-void-music/backend/db/sqlc"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserRepository struct {
-	db *pgxpool.Pool
+	queries *db.Queries
 }
 
 func NewPostgresPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
@@ -38,6 +41,35 @@ func NewPostgresPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, er
 	return pool, nil
 }
 
-func NewUserRepository(db *pgxpool.Pool) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
+	return &UserRepository{
+		queries: db.New(pool),
+	}
+}
+
+func (r *UserRepository) CreateUser(ctx context.Context, email, passwordHash, role string) (db.User, error) {
+	return r.queries.CreateUser(ctx, db.CreateUserParams{
+		Email:        email,
+		PasswordHash: passwordHash,
+		Role:         role,
+	})
+}
+
+func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error) {
+	return r.queries.GetUserByID(ctx, id)
+}
+
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
+	return r.queries.GetUserByEmail(ctx, email)
+}
+
+func (r *UserRepository) GetUsers(ctx context.Context, limit, offset int32) ([]db.User, error) {
+	return r.queries.ListUsers(ctx, db.ListUsersParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+func (r *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	return r.queries.DeleteUser(ctx, id)
 }

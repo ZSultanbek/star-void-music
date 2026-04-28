@@ -11,11 +11,44 @@ import (
 )
 
 type Querier interface {
+	AddSongToPlaylist(ctx context.Context, arg AddSongToPlaylistParams) (PlaylistSong, error)
+	AddSongToUserLibrary(ctx context.Context, arg AddSongToUserLibraryParams) (UserLibrary, error)
+	ClearPlaylistSongs(ctx context.Context, playlistID uuid.UUID) error
+	CreateAlbum(ctx context.Context, arg CreateAlbumParams) (Album, error)
+	CreateArtist(ctx context.Context, arg CreateArtistParams) (Artist, error)
+	CreatePlaylist(ctx context.Context, arg CreatePlaylistParams) (Playlist, error)
+	CreateSong(ctx context.Context, arg CreateSongParams) (Song, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteAlbum(ctx context.Context, id uuid.UUID) error
+	DeleteArtist(ctx context.Context, id uuid.UUID) error
+	DeletePlaylist(ctx context.Context, id uuid.UUID) error
+	DeleteSong(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetAlbumByID(ctx context.Context, id uuid.UUID) (Album, error)
+	GetArtistByID(ctx context.Context, id uuid.UUID) (Artist, error)
+	GetPlaylistByID(ctx context.Context, id uuid.UUID) (Playlist, error)
+	GetSongByID(ctx context.Context, id uuid.UUID) (Song, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	ListAlbumSongs(ctx context.Context, arg ListAlbumSongsParams) ([]Song, error)
+	ListAlbums(ctx context.Context, arg ListAlbumsParams) ([]Album, error)
+	ListAlbumsByArtistID(ctx context.Context, arg ListAlbumsByArtistIDParams) ([]Album, error)
+	ListArtistAlbums(ctx context.Context, arg ListArtistAlbumsParams) ([]Album, error)
+	ListArtistSongs(ctx context.Context, arg ListArtistSongsParams) ([]Song, error)
+	ListArtists(ctx context.Context, arg ListArtistsParams) ([]Artist, error)
+	ListPlaylistSongs(ctx context.Context, arg ListPlaylistSongsParams) ([]ListPlaylistSongsRow, error)
+	ListPlaylistsByUserID(ctx context.Context, arg ListPlaylistsByUserIDParams) ([]Playlist, error)
+	ListSongs(ctx context.Context, arg ListSongsParams) ([]Song, error)
+	ListSongsByAlbumID(ctx context.Context, arg ListSongsByAlbumIDParams) ([]Song, error)
+	ListUserLibrarySongs(ctx context.Context, arg ListUserLibrarySongsParams) ([]ListUserLibrarySongsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	RemoveSongFromPlaylist(ctx context.Context, arg RemoveSongFromPlaylistParams) error
+	RemoveSongFromUserLibrary(ctx context.Context, arg RemoveSongFromUserLibraryParams) error
+	UpdateAlbum(ctx context.Context, arg UpdateAlbumParams) (Album, error)
+	UpdateArtist(ctx context.Context, arg UpdateArtistParams) (Artist, error)
+	UpdatePlaylistName(ctx context.Context, arg UpdatePlaylistNameParams) (Playlist, error)
+	UpdatePlaylistSongPosition(ctx context.Context, arg UpdatePlaylistSongPositionParams) (PlaylistSong, error)
+	UpdateSong(ctx context.Context, arg UpdateSongParams) (Song, error)
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) (User, error)
 }
 

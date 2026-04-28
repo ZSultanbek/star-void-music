@@ -179,55 +179,122 @@ Initialize backend with a clean, scalable skeleton:
 ## users
 
 ```
-id (UUID)
-email (string)
-password_hash (string)
-role (string) // user | admin
-created_at
+  id (UUID)
+  email (string)
+  password_hash (string)
+  role (string) // user | admin
+  created_at
+```
+
+## artists
+```
+  id (UUID, PK)
+  name (string)
+  slug (string, UNIQUE) -- e.g. "star-void"
+  created_at (timestamp)
+```
+
+## albums
+```
+  id (UUID, PK)
+  title (string)
+  artist_id (UUID, FK -> artists.id)
+  cover_image_url (string)
+  release_date (date)
+  created_at (timestamp)
 ```
 
 ## songs
-
 ```
-id (UUID)
-title (string)
-artist (string)
-filepath (string)
-duration (int)
-uploaded_by (user_id)
-created_at
+  id (UUID, PK)
+  title (string)
+  album_id (UUID, FK -> albums.id)
+  filepath (string)
+  duration (int)
+  uploaded_by (UUID, FK -> users.id)
+  created_at (timestamp)
 ```
 
 ## user_library
-
 ```
-user_id
-song_id
-added_at
+  user_id (UUID, FK -> users.id)
+  song_id (UUID, FK -> songs.id)
+  added_at (timestamp)
+
+  PRIMARY KEY (user_id, song_id)
 ```
 
 ## playlists
-
 ```
-id (UUID)
-user_id
-name
-created_at
+  id (UUID)
+  user_id
+  name
+  created_at
 ```
 
 ## playlist_songs
+```
+  playlist_id
+  song_id
+  position
+```
 
+
+---
+# REST API structure
+
+## users
 ```
-playlist_id
-song_id
-position
+    POST   /api/users
+    GET    /api/users
+    GET    /api/users/:id
+    GET    /api/users?email=ex@mail.com
+    PATCH  /api/users/:id
+    DELETE /api/users/:id
 ```
+
+## songs
+```
+    POST   /api/songs
+    GET    /api/songs/:id
+    GET    /api/songs/:id/stream
+    PATCH  /api/songs/:id
+    DELETE /api/songs/:id
+```
+
+## user_library
+```
+    POST   /api/me/library (add song)
+    GET    /api/me/library (list songs)
+    DELETE /api/me/library/:song_id
+```
+
+## artists
+```
+    POST   /api/artists
+    GET    /api/artists
+    GET    /api/artists/:id
+    GET    /api/artists/:id/albums
+    GET    /api/artists/:id/songs
+    PATCH  /api/artists/:id
+```
+
+## albums
+```
+    POST   /api/albums
+    GET    /api/albums
+    GET    /api/albums/:id
+    GET    /api/albums/:id/songs
+    PATCH  /api/albums/:id
+```
+---
 
 ---
 
 # 🔗 Relationships
 
 * User ↔ Songs (many-to-many via user_library)
+* Album → Songs (one-to-many)
 * User → Playlists (one-to-many)
 * Playlist ↔ Songs (many-to-many with order)
 
@@ -256,13 +323,13 @@ GET /api/songs/{id}/stream
 ### 4. Add to Library
 
 ```
-POST /api/library/{song_id}
+POST /api/me/library
 ```
 
 ### 5. View Library
 
 ```
-GET /api/library
+GET /api/me/library
 ```
 
 ---

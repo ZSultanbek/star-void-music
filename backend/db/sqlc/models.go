@@ -8,7 +8,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type Album struct {
+	ID            uuid.UUID   `json:"id"`
+	Title         string      `json:"title"`
+	ArtistID      uuid.UUID   `json:"artist_id"`
+	CoverImageUrl string      `json:"cover_image_url"`
+	ReleaseDate   pgtype.Date `json:"release_date"`
+	CreatedAt     time.Time   `json:"created_at"`
+}
+
+type Artist struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 type Playlist struct {
 	ID        uuid.UUID `json:"id"`
@@ -26,7 +43,7 @@ type PlaylistSong struct {
 type Song struct {
 	ID         uuid.UUID `json:"id"`
 	Title      string    `json:"title"`
-	Artist     string    `json:"artist"`
+	AlbumID    uuid.UUID `json:"album_id"`
 	Filepath   string    `json:"filepath"`
 	Duration   int32     `json:"duration"`
 	UploadedBy uuid.UUID `json:"uploaded_by"`
