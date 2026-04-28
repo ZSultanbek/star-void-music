@@ -47,6 +47,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	requireAdminMW := middleware.RequireRole("admin")
 
 	artistRepo := repository.NewArtistRepository(pool)
 	artistService := service.NewArtistService(artistRepo)
@@ -77,9 +78,9 @@ func main() {
 	api := r.Group("/api")
 	handler.RegisterAuthRoutes(api, authHandler)
 	handler.RegisterUserRoutes(api, userHandler, authMW)
-	handler.RegisterArtistRoutes(api, artistHandler, authMW)
-	handler.RegisterAlbumRoutes(api, albumHandler, authMW)
-	handler.RegisterSongRoutes(api, songHandler, authMW)
+	handler.RegisterArtistRoutes(api, artistHandler, authMW, requireAdminMW)
+	handler.RegisterAlbumRoutes(api, albumHandler, authMW, requireAdminMW)
+	handler.RegisterSongRoutes(api, songHandler, authMW, requireAdminMW)
 	handler.RegisterUserLibraryRoutes(api, userLibraryHandler, authMW)
 
 	if err := r.Run(":" + port); err != nil {

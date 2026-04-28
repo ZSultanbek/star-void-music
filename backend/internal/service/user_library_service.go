@@ -4,6 +4,7 @@ import (
 	"context"
 
 	db "star-void-music/backend/db/sqlc"
+	"star-void-music/backend/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -22,17 +23,29 @@ func NewUserLibraryService(repo UserLibraryRepository) *UserLibraryService {
 	return &UserLibraryService{repo: repo}
 }
 
-func (s *UserLibraryService) AddSongToLibrary(ctx context.Context, params db.AddSongToUserLibraryParams) (db.UserLibrary, error) {
-	if params.UserID == uuid.Nil || params.SongID == uuid.Nil {
-		return db.UserLibrary{}, ErrValidation
+func (s *UserLibraryService) AddSongToLibrary(ctx context.Context, userID, songID uuid.UUID) (models.UserLibraryItem, error) {
+	if userID == uuid.Nil || songID == uuid.Nil {
+		return models.UserLibraryItem{}, ErrValidation
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.AddSongToUserLibrary(dbCtx, params)
+
+	row, err := s.repo.AddSongToUserLibrary(dbCtx, db.AddSongToUserLibraryParams{
+		UserID: userID,
+		SongID: songID,
+	})
+	if err != nil {
+		return models.UserLibraryItem{}, err
+	}
+	return models.UserLibraryItem{
+		UserID: row.UserID,
+		SongID: row.SongID,
+		AddedAt: row.AddedAt,
+	}, nil
 }
 
-func (s *UserLibraryService) ListLibrarySongs(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]db.ListUserLibrarySongsRow, error) {
+func (s *UserLibraryService) ListLibrarySongs(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]models.Song, error) {
 	if userID == uuid.Nil {
 		return nil, ErrValidation
 	}
@@ -40,15 +53,32 @@ func (s *UserLibraryService) ListLibrarySongs(ctx context.Context, userID uuid.U
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.ListUserLibrarySongs(dbCtx, userID, limit, offset)
+
+	rows, err := s.repo.ListUserLibrarySongs(dbCtx, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]models.Song, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, models.Song{
+			ID: r.SongID, Title: r.Title, AlbumID: r.AlbumID, Filepath: r.Filepath,
+			Duration: r.Duration, UploadedBy: r.UploadedBy, CreatedAt: r.CreatedAt,
+		})
+	}
+	return out, nil
 }
 
-func (s *UserLibraryService) RemoveSongFromLibrary(ctx context.Context, params db.RemoveSongFromUserLibraryParams) error {
-	if params.UserID == uuid.Nil || params.SongID == uuid.Nil {
+func (s *UserLibraryService) RemoveSongFromLibrary(ctx context.Context, userID, songID uuid.UUID) error {
+	if userID == uuid.Nil || songID == uuid.Nil {
 		return ErrValidation
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.RemoveSongFromUserLibrary(dbCtx, params)
+
+	return s.repo.RemoveSongFromUserLibrary(dbCtx, db.RemoveSongFromUserLibraryParams{
+		UserID: userID,
+		SongID: songID,
+	})
 }

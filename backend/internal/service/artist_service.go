@@ -5,8 +5,10 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
 	db "star-void-music/backend/db/sqlc"
+	"star-void-music/backend/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -32,49 +34,79 @@ func NewArtistService(repo ArtistRepository) *ArtistService {
 	return &ArtistService{repo: repo}
 }
 
-func (s *ArtistService) CreateArtist(ctx context.Context, params db.CreateArtistParams) (db.Artist, error) {
-	params.Name = strings.TrimSpace(params.Name)
-	params.Slug = strings.TrimSpace(strings.ToLower(params.Slug))
-	if params.Name == "" || !artistSlugPattern.MatchString(params.Slug) {
-		return db.Artist{}, ErrValidation
+type CreateArtistInput struct {
+	Name string
+	Slug string
+}
+
+type UpdateArtistInput struct {
+	ID   uuid.UUID
+	Name string
+	Slug string
+}
+
+func (s *ArtistService) CreateArtist(ctx context.Context, in CreateArtistInput) (models.Artist, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Slug = strings.TrimSpace(strings.ToLower(in.Slug))
+	if in.Name == "" || !artistSlugPattern.MatchString(in.Slug) {
+		return models.Artist{}, ErrValidation
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.CreateArtist(dbCtx, params)
+	row, err := s.repo.CreateArtist(dbCtx, db.CreateArtistParams{Name: in.Name, Slug: in.Slug})
+	if err != nil {
+		return models.Artist{}, err
+	}
+	return mapArtist(row), nil
 }
 
-func (s *ArtistService) GetArtistByID(ctx context.Context, id uuid.UUID) (db.Artist, error) {
+func (s *ArtistService) GetArtistByID(ctx context.Context, id uuid.UUID) (models.Artist, error) {
 	if id == uuid.Nil {
-		return db.Artist{}, ErrValidation
+		return models.Artist{}, ErrValidation
 	}
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
 
-	artist, err := s.repo.GetArtistByID(dbCtx, id)
+	row, err := s.repo.GetArtistByID(dbCtx, id)
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
-		return db.Artist{}, ErrNotFound
+		return models.Artist{}, ErrNotFound
 	}
-	return artist, err
+	if err != nil {
+		return models.Artist{}, err
+	}
+	return mapArtist(row), nil
 }
 
-func (s *ArtistService) ListArtists(ctx context.Context, limit, offset int32) ([]db.Artist, error) {
+func (s *ArtistService) ListArtists(ctx context.Context, limit, offset int32) ([]models.Artist, error) {
 	limit, offset = normalizePagination(limit, offset)
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.ListArtists(dbCtx, limit, offset)
+	rows, err := s.repo.ListArtists(dbCtx, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.Artist, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, mapArtist(r))
+	}
+	return out, nil
 }
 
-func (s *ArtistService) UpdateArtist(ctx context.Context, params db.UpdateArtistParams) (db.Artist, error) {
-	params.Name = strings.TrimSpace(params.Name)
-	params.Slug = strings.TrimSpace(strings.ToLower(params.Slug))
-	if params.ID == uuid.Nil || params.Name == "" || !artistSlugPattern.MatchString(params.Slug) {
-		return db.Artist{}, ErrValidation
+func (s *ArtistService) UpdateArtist(ctx context.Context, in UpdateArtistInput) (models.Artist, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Slug = strings.TrimSpace(strings.ToLower(in.Slug))
+	if in.ID == uuid.Nil || in.Name == "" || !artistSlugPattern.MatchString(in.Slug) {
+		return models.Artist{}, ErrValidation
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.UpdateArtist(dbCtx, params)
+	row, err := s.repo.UpdateArtist(dbCtx, db.UpdateArtistParams{ID: in.ID, Name: in.Name, Slug: in.Slug})
+	if err != nil {
+		return models.Artist{}, err
+	}
+	return mapArtist(row), nil
 }
 
 func (s *ArtistService) DeleteArtist(ctx context.Context, id uuid.UUID) error {
@@ -86,7 +118,7 @@ func (s *ArtistService) DeleteArtist(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteArtist(dbCtx, id)
 }
 
-func (s *ArtistService) ListArtistAlbums(ctx context.Context, artistID uuid.UUID, limit, offset int32) ([]db.Album, error) {
+func (s *ArtistService) ListArtistAlbums(ctx context.Context, artistID uuid.UUID, limit, offset int32) ([]models.Album, error) {
 	if artistID == uuid.Nil {
 		return nil, ErrValidation
 	}
@@ -94,16 +126,29 @@ func (s *ArtistService) ListArtistAlbums(ctx context.Context, artistID uuid.UUID
 
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
-	return s.repo.ListArtistAlbums(dbCtx, artistID, limit, offset)
+	rows, err := s.repo.ListArtistAlbums(dbCtx, artistID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.Album, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, mapAlbum(r))
+	}
+	return out, nil
 }
 
-func (s *ArtistService) ListArtistSongs(ctx context.Context, artistID uuid.UUID, limit, offset int32) ([]db.Song, error) {
-	if artistID == uuid.Nil {
-		return nil, ErrValidation
-	}
-	limit, offset = normalizePagination(limit, offset)
+func mapArtist(r db.Artist) models.Artist {
+	return models.Artist{ID: r.ID, Name: r.Name, Slug: r.Slug, CreatedAt: r.CreatedAt}
+}
 
-	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
-	defer cancel()
-	return s.repo.ListArtistSongs(dbCtx, artistID, limit, offset)
+func mapAlbum(r db.Album) models.Album {
+	var rd *time.Time
+	if r.ReleaseDate.Valid {
+		t := r.ReleaseDate.Time
+		rd = &t
+	}
+	return models.Album{
+		ID: r.ID, Title: r.Title, ArtistID: r.ArtistID,
+		CoverImageURL: r.CoverImageUrl, ReleaseDate: rd, CreatedAt: r.CreatedAt,
+	}
 }

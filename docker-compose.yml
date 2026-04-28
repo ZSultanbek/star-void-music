@@ -4,14 +4,29 @@ services:
   db:
     image: postgres:15
     container_name: svm-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starvoid -d star_void_music"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
-      POSTGRES_USER: starvoid
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: star_void_music
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    
+  migrate:
+    image: migrate/migrate:v4.15.2
+    container_name: svm-migrate
+    command: ["-path", "/migrations", "-database", "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable", "up"]
+    volumes:
+      - ./backend/db/migrations:/migrations
+    depends_on:
+      db:
+        condition: service_healthy
 
   backend:
     build:
@@ -20,9 +35,22 @@ services:
     container_name: svm-backend
     environment:
       PORT: 8080
-      DATABASE_URL: postgres://postgres:password@db:5432/starvoid?sslmode=disable
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+  
+  adminer:
+    image: adminer
+    restart: always
+    container_name: svm-adminer
+    ports:
+      - "8081:8080"
     depends_on:
       - db
 
